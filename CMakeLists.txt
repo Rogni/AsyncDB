@@ -35,6 +35,9 @@ set (SOURCES
 
     Include/AsyncDB/ADBCustomListModelConfiguration.h
     Src/AsyncDB/ADBCustomListModelConfiguration.cpp
+
+    Include/AsyncDB/AsyncDB.h
+    Src/AsyncDB/AsyncDB.cpp
     )
 
 add_library(${PROJECT_NAME} ${SOURCES})

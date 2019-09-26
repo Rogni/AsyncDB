@@ -4,6 +4,7 @@
 #include <QVariant>
 #include <QVector>
 #include <QDebug>
+#include <QThread>
 
 ADBCustomListModelConfiguration::ADBCustomListModelConfiguration(QObject *parent): ADBAbstractListModelConfiguration(parent) {}
 
@@ -54,15 +55,12 @@ void ADBCustomListModelConfiguration::select(std::function<void (QVector<QVarian
 {
     if (database()) {
         auto exec = [callback, queryStr = m_selectQuery] (QSqlDatabase db) {
-            qDebug () << queryStr;
             QVector<QVariantMap> result;
             QStringList roles;
             if (queryStr != "" ) {
                 QSqlQuery query(db);
                 query.prepare(queryStr);
                 query.exec();
-
-                qDebug () << query.lastQuery();
 
                 auto s = query.size();
                 result.reserve( s > -1 ? s : 0 );
@@ -80,6 +78,7 @@ void ADBCustomListModelConfiguration::select(std::function<void (QVector<QVarian
                 if (!result.empty()) roles = result.first().keys();
             }
             return [callback, roles = std::move(roles), result = std::move(result)] () {
+
                 callback(result, roles);
             };
         };

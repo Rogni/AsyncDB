@@ -43,10 +43,11 @@ public:
     void addToQueue(Promise p);
 
 signals:
-    void execute(Promise p);
-    void ready(Promise p);
+    void execute(ThreadManager::Promise p);
+    void ready(ThreadManager::Promise p);
 
 private:
+    QObject* m_context = nullptr;
     QThread m_thread;
 };
 

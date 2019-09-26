@@ -1,8 +1,14 @@
 #include <Threads/ThreadManager.h>
+#include <QThread>
+#include <QDebug>
 
 ThreadManager::Manager::Manager()
 {
-    connect(this, &Manager::execute, [this](Promise p) {
+    qRegisterMetaType<Promise>();
+    m_context = new QObject();
+    m_context->moveToThread(&m_thread);
+    connect(&m_thread, &QThread::finished, m_context, &QObject::deleteLater);
+    connect(this, &Manager::execute, m_context, [this](Promise p) {
         try {
             p.m_state->resolve =  p.m_state->execute();
         } catch (...) {
@@ -11,7 +17,7 @@ ThreadManager::Manager::Manager()
         emit ready(p);
     });
 
-    connect(this, &Manager::ready, [](Promise p) {
+    connect(this, &Manager::ready, this, [](Promise p) {
         if (p.m_state->exception) {
             if (p.m_state->reject) {
                 p.m_state->reject(p.m_state->exception);
@@ -22,6 +28,9 @@ ThreadManager::Manager::Manager()
             p.m_state->resolve();
         }
     });
+    m_thread.start();
+
+
 }
 
 ThreadManager::Manager::~Manager()
