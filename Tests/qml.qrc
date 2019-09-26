@@ -3,5 +3,6 @@
         <file>main.qml</file>
         <file>ListConfigurationPage.qml</file>
         <file>CustomConfigPage.qml</file>
+        <file>LitOfQuery.qml</file>
     </qresource>
 </RCC>
