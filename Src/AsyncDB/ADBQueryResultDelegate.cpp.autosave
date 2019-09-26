@@ -1,3 +1,0 @@
-#include <AsyncDB/ADBQueryResultDelegate.h>
-
-ADBQueryResultDelegate::ADBQueryResultDelegate() {}
