@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/">
+        <file>main.qml</file>
+        <file>ListConfigurationPage.qml</file>
+        <file>CustomConfigPage.qml</file>
+    </qresource>
+</RCC>
