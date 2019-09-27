@@ -4,12 +4,13 @@ language: generic
 
 install:
   - sudo add-apt-repository -y ppa:beineri/opt-qt-5.12.3-xenial
+  - sudo add-apt-repository ppa:jonathonf/gcc-9.0
   - travis_retry sudo apt-get update
-  - travis_wait 30 sudo apt-get -y install -qq mesa-common-dev qt512-meta-full libgl1-mesa-dev
+  - travis_wait 30 sudo apt-get -y install -qq mesa-common-dev qt512-meta-full libgl1-mesa-dev g++-9 gcc-9
 
 script:
   - source /opt/qt512/bin/qt512-env.sh 
   - mkdir build
   - cd build
-  - cmake .. -DCMAKE_BUILD_TYPE=Release
+  - cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILLER=/usr/bin/g++-9
   - make -j4
