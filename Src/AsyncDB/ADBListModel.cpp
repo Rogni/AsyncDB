@@ -92,6 +92,7 @@ int ADBListModel::rowCount(const QModelIndex &parent) const
 
 QVariant ADBListModel::data(const QModelIndex &index, int role) const
 {
+    if (!index.isValid()) return QVariant();
     if (index.row() >= m_p->records.size() || !m_p->roles.contains(role)) return QVariant();
     auto record = m_p->records[ index.row() ];
     QString key = QString::fromUtf8(m_p->roles[role]);
@@ -121,6 +122,17 @@ bool ADBListModel::setItemData(const QModelIndex &index, const QMap<int, QVarian
         m_configuration->update(old, newRecord, exec);
     }
     return true;
+}
+
+void ADBListModel::append(QVariantMap item)
+{
+    if (m_configuration) {
+        auto callback = [w = std::weak_ptr(m_p)] () {
+            auto p = w.lock();
+            if (p) p->model->select();
+        };
+        m_configuration->insert(item, callback);
+    }
 }
 
 ADBAbstractListModelConfiguration *ADBListModel::configuration() const

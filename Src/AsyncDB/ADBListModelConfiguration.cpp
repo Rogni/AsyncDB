@@ -12,6 +12,7 @@ const QString UPDATE_QUERY_STR_TEMPLATE = "UPDATE %1 "
                                           "WHERE %3 ";
 const QString INSERT_QUERY_STR_TEMPLATE = "INSERT INTO %1 ( %2 )"
                                           "VALUES( %3 )";
+
 const QString OLD_VALUE_TEMPLATE_BIND = ":old_%1";
 const QString NEW_VALUE_TEMPLATE_BIND = ":new_%1";
 const QString OLD_VALUE_TEMPLATE = "%1 = :old_%1";
@@ -122,7 +123,31 @@ void ADBListModelConfiguration::update(QVariantMap from, QVariantMap to, std::fu
 
 }
 
-void ADBListModelConfiguration::insert(QVariantMap item, std::function<void ()>)
+void ADBListModelConfiguration::insert(QVariantMap item, std::function<void ()> callback)
 {
+    if (database()) {
+        database()->execute(
+                    [table = tablename(),
+                    columns = columns(),
+                    item = std::move(item),
+                    callback] (QSqlDatabase db) {
 
+            QSqlQuery query(db);
+
+
+
+            QString queryStr = INSERT_QUERY_STR_TEMPLATE.arg(table).arg(columns.join(", ")).arg(":" + columns.join(", :"));
+            query.prepare(queryStr);
+
+            for (const auto &c: columns) {
+                query.bindValue(":" + c, item[c]);
+            }
+
+            query.exec();
+
+            return [callback]() {
+                callback();
+            };
+        } );
+    }
 }

@@ -8,7 +8,6 @@ ApplicationWindow {
     width: 300
     height: 400
     visible: true
-    title: "Custom Config"
     ADBDatabase {
         id: testDatabase
         configuration: ADBDatabaseConfiguration {
@@ -17,22 +16,8 @@ ApplicationWindow {
         }
     }
 
-    CustomConfigPage {
+    ListConfigurationPage {
         anchors.fill: parent
         database: testDatabase
     }
-
-    Window {
-        width: 300
-        height: 400
-        visible: true
-        title: "List Config"
-
-        ListConfigurationPage {
-            anchors.fill: parent
-            database: testDatabase
-        }
-    }
-
-
 }

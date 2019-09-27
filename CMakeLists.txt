@@ -38,6 +38,7 @@ set (SOURCES
 
     Include/AsyncDB/AsyncDB.h
     Src/AsyncDB/AsyncDB.cpp
+
     )
 
 add_library(${PROJECT_NAME} ${SOURCES})

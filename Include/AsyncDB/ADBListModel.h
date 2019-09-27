@@ -30,6 +30,7 @@ public:
     QHash<int, QByteArray> roleNames() const override;
     bool setItemData(const QModelIndex &index, const QMap<int, QVariant> &roles) override;
 
+    Q_INVOKABLE void append(QVariantMap item);
 
 
     ADBAbstractListModelConfiguration* configuration() const;
