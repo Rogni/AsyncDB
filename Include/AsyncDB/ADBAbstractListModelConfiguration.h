@@ -23,12 +23,8 @@ public:
 
 
     virtual void select(std::function<void(QVector<QVariantMap>, QStringList)> callback);
-    virtual void update(QVariantMap from, QVariantMap to,std::function<void()>);
-    virtual void insert(QVector<QVariantMap> items, std::function<void()>);
 
     using DbFunctor = std::function<void(QSqlDatabase)>;
-
-    virtual DbFunctor selectFunctor(std::function<void(QVector<QVariantMap>, QStringList)> callback);
     virtual DbFunctor updateFunctor(QVariantMap from, QVariantMap to);
     virtual DbFunctor insertFunctor(QVector<QVariantMap> items);
 

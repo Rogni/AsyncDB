@@ -13,21 +13,6 @@ void ADBAbstractListModelConfiguration::select(std::function<void (QVector<QVari
 
 }
 
-void ADBAbstractListModelConfiguration::update(QVariantMap from, QVariantMap to, std::function<void ()>)
-{
-
-}
-
-void ADBAbstractListModelConfiguration::insert(QVector<QVariantMap> item, std::function<void()>)
-{
-
-}
-
-ADBAbstractListModelConfiguration::DbFunctor ADBAbstractListModelConfiguration::selectFunctor(std::function<void (QVector<QVariantMap>, QStringList)> callback)
-{
-    return [] (QSqlDatabase) {};
-}
-
 ADBAbstractListModelConfiguration::DbFunctor ADBAbstractListModelConfiguration::updateFunctor(QVariantMap from, QVariantMap to)
 {
     return [] (QSqlDatabase) {};

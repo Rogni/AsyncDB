@@ -2,6 +2,6 @@
     <qresource prefix="/">
         <file>main.qml</file>
         <file>ListConfigurationPage.qml</file>
-        <file>LitOfQuery.qml</file>
+        <file>ListOfQuery.qml</file>
     </qresource>
 </RCC>

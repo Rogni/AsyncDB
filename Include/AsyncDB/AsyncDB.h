@@ -5,6 +5,5 @@
 #include <AsyncDB/ADBDatabaseConfiguration.h>
 #include <AsyncDB/ADBListModel.h>
 #include <AsyncDB/ADBListModelConfiguration.h>
-#include <AsyncDB/ADBCustomListModelConfiguration.h>
 
 #endif // ASYNCDB_H

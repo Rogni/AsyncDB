@@ -16,7 +16,7 @@ Page {
         }
     }
 
-    LitOfQuery {
+    ListOfQuery {
         anchors.fill: parent
         model: adbModel
     }
