@@ -36,7 +36,7 @@ signals:
 public:
     void select(std::function<void(QVector<QVariantMap>, QStringList)> callback) override;
     void update(QVariantMap from, QVariantMap to, std::function<void ()>) override;
-    void insert(QVariantMap item, std::function<void ()>) override;
+    void insert(QVector<QVariantMap> item, std::function<void ()>) override;
 };
 
 #endif // ADBCUSTOMLISTMODELCONFIGURATION_H

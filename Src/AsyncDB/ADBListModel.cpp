@@ -1,14 +1,7 @@
 #include <AsyncDB/ADBListModel.h>
 #include <QSqlQuery>
+#include <QtDebug>
 
-const QString SELECT_QUERY_STR_TEMPLATE = "SELECT %1 FROM :tablename ;";
-const QString UPDATE_QUERY_STR_TEMPLATE = "UPDATE :tablename "
-                                          "SET %1 "
-                                          "WHERE %2 ";
-const QString INSERT_QUERY_STR_TEMPLATE = "INSERT INTO :tablename ( %1 )"
-                                          "VALUES( %2 );";
-const QString OLD_VALUE_TEMPLATE = "&1 = :old_%1";
-const QString NEW_VALUE_TEMPLATE = "%1 = :new_%1";
 
 QHash<int, QByteArray> makeRoleNamesHash(const QStringList &roles)
 {
@@ -37,7 +30,44 @@ struct ADBListModel::Private
     Private(ADBListModel *m): model(m) {}
     ADBListModel *model = nullptr;
     QVector<QVariantMap> records;
+    QHash<int, QVariantMap> updatedRecords;
+    QVector<QVariantMap> newRecords;
     QHash<int, QByteArray> roles;
+
+    int rowsCount() {
+        return records.size() + newRecords.size();
+    }
+
+    QVariant data(int index, QString field)
+    {
+        QVariant result;
+        if (index >= 0 && index < records.size()) {
+            if (updatedRecords.contains(index)) {
+                result = updatedRecords[index][field];
+            } else {
+                result = records[index][field];
+            }
+        } else if (int i = index - records.size(); i < newRecords.size()) {
+            result = newRecords[i][field];
+        }
+        return result;
+    }
+
+    bool setData(int index, QString field, QVariant value)
+    {
+        if (data(index, field) == value) return false;
+        if (index >= 0 && index < records.size()) {
+            if (!updatedRecords.contains(index)) {
+                updatedRecords[index] = records[index];
+            }
+            updatedRecords[index][field] = value;
+
+        } else if (int i = index - records.size(); i < newRecords.size()) {
+            newRecords[i][field] = value;
+        }
+        return true;
+    }
+
 };
 
 ADBListModel::ADBListModel(QObject *parent):
@@ -77,6 +107,7 @@ void ADBListModel::select()
                 emit ptr->model->beginResetModel();
                 ptr->records = result;
                 ptr->roles = makeRoleNamesHash(roles);
+                ptr->model->rollback();
                 emit ptr->model->endResetModel();
             }
         };
@@ -87,17 +118,24 @@ void ADBListModel::select()
 int ADBListModel::rowCount(const QModelIndex &parent) const
 {
     (void)parent;
-    return static_cast<int>(m_p->records.size());
+    return m_p->rowsCount();
 }
 
 QVariant ADBListModel::data(const QModelIndex &index, int role) const
 {
-    if (!index.isValid()) return QVariant();
-    if (index.row() >= m_p->records.size() || !m_p->roles.contains(role)) return QVariant();
-    auto record = m_p->records[ index.row() ];
     QString key = QString::fromUtf8(m_p->roles[role]);
-    if (!record.contains(key)) return QVariant();
-    return record[key];
+    return m_p->data(index.row(), key);
+}
+
+bool ADBListModel::setData(const QModelIndex &index, const QVariant &value, int role)
+{
+
+    QString key = QString::fromUtf8(m_p->roles[role]);
+    if (m_p->setData(index.row(), key, value)) {
+        dataChanged(index, index);
+        return true;
+    }
+    return false;
 }
 
 QHash<int, QByteArray> ADBListModel::roleNames() const
@@ -105,34 +143,53 @@ QHash<int, QByteArray> ADBListModel::roleNames() const
     return m_p->roles;
 }
 
-bool ADBListModel::setItemData(const QModelIndex &index, const QMap<int, QVariant> &newValues)
-{
-    if (m_configuration) {
-        auto old = m_p->records.at(index.row());
-        auto roles = roleNames();
-        auto newRecord = makeRoleNamesMap(roles, newValues);
-        auto exec = [w = std::weak_ptr(m_p), index, newRecord]() {
-            auto ptr = w.lock();
-            if (ptr) {
-                ptr->records[index.row()] = newRecord;
-                emit ptr->model->dataChanged(index, index);
-            }
-        };
-
-        m_configuration->update(old, newRecord, exec);
-    }
-    return true;
-}
-
 void ADBListModel::append(QVariantMap item)
 {
     if (m_configuration) {
-        auto callback = [w = std::weak_ptr(m_p)] () {
-            auto p = w.lock();
-            if (p) p->model->select();
-        };
-        m_configuration->insert(item, callback);
+        beginInsertRows(index(m_p->rowsCount()-1), m_p->rowsCount(), m_p->rowsCount());
+        m_p->newRecords.append(std::move(item));
+        endInsertRows();
     }
+}
+
+void ADBListModel::commit()
+{
+    if (m_configuration) {
+        auto insert = m_configuration->insertFunctor(std::move(m_p->newRecords));
+        std::vector<std::function<void(QSqlDatabase)>> updateFunctors;
+        updateFunctors.reserve(static_cast<size_t>(m_p->records.size()));
+        for (auto i = m_p->updatedRecords.begin();
+             i != m_p->updatedRecords.end();
+             ++i) {
+            QVariantMap from = m_p->records[i.key()];
+            QVariantMap to = i.value();
+            auto functor = m_configuration->updateFunctor(std::move(from), std::move(to));
+            updateFunctors.push_back(std::move(functor));
+        }
+        auto exec = [
+                w = std::weak_ptr(m_p),
+                insert = std::move(insert),
+                updateFunctors = std::move(updateFunctors)] (QSqlDatabase db) {
+            insert(db);
+            for (auto &f: updateFunctors) {
+                f(db);
+            }
+            return [w] () {
+                auto s = w.lock();
+                if (s) {
+
+                    s->model->select();
+                }
+            };
+        };
+        m_configuration->execute(exec);
+    }
+}
+
+void ADBListModel::rollback()
+{
+    m_p->newRecords.clear();
+    m_p->updatedRecords.clear();
 }
 
 ADBAbstractListModelConfiguration *ADBListModel::configuration() const

@@ -28,9 +28,11 @@ public:
     int rowCount(const QModelIndex &parent) const override;
     QVariant data(const QModelIndex &index, int role) const override;
     QHash<int, QByteArray> roleNames() const override;
-    bool setItemData(const QModelIndex &index, const QMap<int, QVariant> &roles) override;
+    bool setData(const QModelIndex &index, const QVariant &value, int role) override;
 
     Q_INVOKABLE void append(QVariantMap item);
+    Q_INVOKABLE void commit();
+    Q_INVOKABLE void rollback();
 
 
     ADBAbstractListModelConfiguration* configuration() const;
@@ -39,6 +41,7 @@ private:
     struct Private;
     std::shared_ptr<Private> m_p;
     ADBAbstractListModelConfiguration* m_configuration = nullptr;
+
 
 };
 

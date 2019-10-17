@@ -93,7 +93,7 @@ void ADBCustomListModelConfiguration::update(QVariantMap from, QVariantMap to, s
     }
 }
 
-void ADBCustomListModelConfiguration::insert(QVariantMap item, std::function<void ()>)
+void ADBCustomListModelConfiguration::insert(QVector<QVariantMap> item, std::function<void ()>)
 {
     if (database()) {
 

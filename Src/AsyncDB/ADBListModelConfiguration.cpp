@@ -6,17 +6,8 @@
 #include <QDebug>
 #include <QVariant>
 
-const QString SELECT_QUERY_STR_TEMPLATE = "SELECT %1 FROM %2 ";
-const QString UPDATE_QUERY_STR_TEMPLATE = "UPDATE %1 "
-                                          "SET %2 "
-                                          "WHERE %3 ";
-const QString INSERT_QUERY_STR_TEMPLATE = "INSERT INTO %1 ( %2 )"
-                                          "VALUES( %3 )";
+#include <Src/AsyncDB/ADBQueryHelpers.h>
 
-const QString OLD_VALUE_TEMPLATE_BIND = ":old_%1";
-const QString NEW_VALUE_TEMPLATE_BIND = ":new_%1";
-const QString OLD_VALUE_TEMPLATE = "%1 = :old_%1";
-const QString NEW_VALUE_TEMPLATE = "%1 = :new_%1";
 
 ADBListModelConfiguration::ADBListModelConfiguration(QObject *parent): ADBAbstractListModelConfiguration(parent) {}
 
@@ -59,22 +50,22 @@ void ADBListModelConfiguration::select(std::function<void (QVector<QVariantMap>,
                 [callback,
                 table = tablename(),
                 columns = std::move(columnsTemp)] (QSqlDatabase db) {
+
+
+
         QVector<QVariantMap> records;
         if (!columns.isEmpty()) {
+            auto parser = [&records] (QStringList && , QVector<QVariantMap> && r) {
+                records = std::move(r);
+            };
+
+            auto handleSelectResponse = parseSelectQuery(parser)(queryExit());
+            auto handleErr = handleSqlError([](QSqlQuery q) { qDebug() << Q_FUNC_INFO << q.lastError().text(); })(handleSelectResponse);
+            auto exec = executeQuery()(handleErr);
+            auto setupQuery = makeSelectQuery(columns, {table})(exec);
+
             QSqlQuery query(db);
-
-            QString columnsStr = columns.join(", ");
-            QString queryStr = SELECT_QUERY_STR_TEMPLATE.arg(columnsStr).arg(table);
-            query.prepare(queryStr);
-            query.exec();
-
-            while (query.next()) {
-                QVariantMap map;
-                for (const auto &c: columns) {
-                    map[c] = query.value(c);
-                }
-                records.push_back(std::move(map));
-            }
+            setupQuery(query);
         }
         return [callback, r = std::move(records), columns]() {
             callback(r, columns);
@@ -92,28 +83,12 @@ void ADBListModelConfiguration::update(QVariantMap from, QVariantMap to, std::fu
                     newRecord = std::move(to),
                     callback] (QSqlDatabase db) {
 
+            auto handleErr = handleSqlError([](QSqlQuery q) { qDebug() << Q_FUNC_INFO << q.lastError().text(); })(queryExit());
+            auto exec = executeQuery()(handleErr);
+            auto setupQuery = makeUpdateQuery(std::move(table), std::move(oldRecord), std::move(newRecord))(exec);
+
             QSqlQuery query(db);
-
-            QStringList newColumns;
-            QStringList oldColumns;
-
-            newColumns.reserve(columns.size());
-            oldColumns.reserve(columns.size());
-
-            for (const auto &c: columns) {
-                newColumns += NEW_VALUE_TEMPLATE.arg(c);
-                oldColumns += OLD_VALUE_TEMPLATE.arg(c);
-            }
-
-            QString queryStr = UPDATE_QUERY_STR_TEMPLATE.arg(table).arg(newColumns.join(", ")).arg(oldColumns.join(" AND "));
-            query.prepare(queryStr);
-
-            for (const auto &c: columns) {
-                query.bindValue(NEW_VALUE_TEMPLATE_BIND.arg(c), newRecord[c]);
-                query.bindValue(OLD_VALUE_TEMPLATE_BIND.arg(c), oldRecord[c]);
-            }
-
-            query.exec();
+            setupQuery(query);
 
             return [callback]() {
                 callback();
@@ -123,27 +98,20 @@ void ADBListModelConfiguration::update(QVariantMap from, QVariantMap to, std::fu
 
 }
 
-void ADBListModelConfiguration::insert(QVariantMap item, std::function<void ()> callback)
+void ADBListModelConfiguration::insert(QVector<QVariantMap> items, std::function<void ()> callback)
 {
     if (database()) {
         database()->execute(
                     [table = tablename(),
                     columns = columns(),
-                    item = std::move(item),
+                    items = std::move(items),
                     callback] (QSqlDatabase db) {
 
+            auto handleErr = handleSqlError([](QSqlQuery q) { qDebug() << Q_FUNC_INFO << q.lastError().text(); })(queryExit());
+            auto exec = executeQuery()(handleErr);
+            auto setupQuery = makeInsertQuery(std::move(table), std::move(columns), std::move(items))(exec);
             QSqlQuery query(db);
-
-
-
-            QString queryStr = INSERT_QUERY_STR_TEMPLATE.arg(table).arg(columns.join(", ")).arg(":" + columns.join(", :"));
-            query.prepare(queryStr);
-
-            for (const auto &c: columns) {
-                query.bindValue(":" + c, item[c]);
-            }
-
-            query.exec();
+            setupQuery(query);
 
             return [callback]() {
                 callback();
@@ -151,3 +119,61 @@ void ADBListModelConfiguration::insert(QVariantMap item, std::function<void ()> 
         } );
     }
 }
+
+ADBAbstractListModelConfiguration::DbFunctor ADBListModelConfiguration::selectFunctor(std::function<void (QVector<QVariantMap>, QStringList)> callback)
+{
+    return [callback,
+            table = tablename(),
+            columns = columns()] (QSqlDatabase db) {
+        QVector<QVariantMap> records;
+        if (!columns.isEmpty()) {
+            auto parser = [&records] (QStringList && , QVector<QVariantMap> && r) {
+                records = std::move(r);
+            };
+
+            auto handleSelectResponse = parseSelectQuery(parser)(queryExit());
+            auto handleErr = handleSqlError([](QSqlQuery q) { qDebug() << Q_FUNC_INFO << q.lastError().text(); })(handleSelectResponse);
+            auto exec = executeQuery()(handleErr);
+            auto setupQuery = makeSelectQuery(columns, {table})(exec);
+
+            QSqlQuery query(db);
+            setupQuery(query);
+            callback(std::move(records), columns);
+        }
+    };
+}
+
+ADBAbstractListModelConfiguration::DbFunctor ADBListModelConfiguration::updateFunctor(QVariantMap from, QVariantMap to)
+{
+    return [table = tablename(),
+            columns = columns(),
+            oldRecord = std::move(from),
+            newRecord = std::move(to)] (QSqlDatabase db) {
+        auto handleErr = handleSqlError([](QSqlQuery q) { qDebug()<< Q_FUNC_INFO << q.lastError().text(); })(queryExit());
+        auto exec = executeQuery()(handleErr);
+        auto setupQuery = makeUpdateQuery(std::move(table), std::move(oldRecord), std::move(newRecord))(exec);
+
+        QSqlQuery query(db);
+        setupQuery(query);
+    };
+}
+
+ADBAbstractListModelConfiguration::DbFunctor ADBListModelConfiguration::insertFunctor(QVector<QVariantMap> items)
+{
+    return [
+            items = std::move(items),
+            table = tablename(),
+            columns = columns()
+            ] (QSqlDatabase db) {
+        if (!items.isEmpty()) {
+            auto handleErr = handleSqlError([](QSqlQuery q) { qDebug()<< Q_FUNC_INFO << q.lastError().text(); })(queryExit());
+            auto exec = executeQuery()(handleErr);
+            auto setupQuery = makeInsertQuery(std::move(table), std::move(columns), std::move(items))(exec);
+            QSqlQuery query(db);
+            setupQuery(query);
+        }
+
+    };
+}
+
+

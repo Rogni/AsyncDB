@@ -4,6 +4,7 @@
 #include <QObject>
 #include <AsyncDB/ADBDatabase.h>
 #include <QVariant>
+#include <QVector>
 
 class ADBAbstractListModelConfiguration: public QObject
 {
@@ -19,9 +20,19 @@ public:
 
     ADBDatabase* database() const;
 
+
+
     virtual void select(std::function<void(QVector<QVariantMap>, QStringList)> callback);
     virtual void update(QVariantMap from, QVariantMap to,std::function<void()>);
-    virtual void insert(QVariantMap item, std::function<void()>);
+    virtual void insert(QVector<QVariantMap> items, std::function<void()>);
+
+    using DbFunctor = std::function<void(QSqlDatabase)>;
+
+    virtual DbFunctor selectFunctor(std::function<void(QVector<QVariantMap>, QStringList)> callback);
+    virtual DbFunctor updateFunctor(QVariantMap from, QVariantMap to);
+    virtual DbFunctor insertFunctor(QVector<QVariantMap> items);
+
+    void execute(std::function<std::function<void()>(QSqlDatabase)> f);
 
 public slots:
     void setDatabase(ADBDatabase* database);

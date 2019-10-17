@@ -37,7 +37,14 @@ signals:
 public:
     void select(std::function<void (QVector<QVariantMap>, QStringList)> callback) override;
     void update(QVariantMap from, QVariantMap to, std::function<void ()>) override;
-    void insert(QVariantMap item, std::function<void ()>) override;
+    void insert(QVector<QVariantMap> items, std::function<void ()>) override;
+
+
+    // ADBAbstractListModelConfiguration interface
+public:
+    DbFunctor selectFunctor(std::function<void (QVector<QVariantMap>, QStringList)> callback) override;
+    DbFunctor updateFunctor(QVariantMap from, QVariantMap to) override;
+    DbFunctor insertFunctor(QVector<QVariantMap> items) override;
 };
 
 #endif // ADBLISTMODELCONFIGURATION_H

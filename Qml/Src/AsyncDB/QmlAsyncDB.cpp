@@ -17,5 +17,4 @@ void QmlAsyncDB::registerQmlType(QQmlEngine *)
     QML_REGISTER_ASYNC_DB(ADBListModelConfiguration);
     QML_REGISTER_ASYNC_DB(ADBAbstractListModelConfiguration);
     QML_REGISTER_ASYNC_DB(ADBCustomListModelConfiguration);
-    QML_REGISTER_ASYNC_DB(ADBItemModel);
 }

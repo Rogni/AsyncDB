@@ -19,7 +19,10 @@ ListView {
                 }
                 Button {
                     text: qsTr("Ok")
-                    onClicked: root.model.append({"comment": commentField.text})
+                    onClicked: {
+                        root.model.append({"comment": commentField.text})
+                        root.model.commit()
+                    }
                 }
             }
 
@@ -35,31 +38,32 @@ ListView {
             parent: Overlay.overlay
             anchors.centerIn: parent
             Column {
-                ADBItemModel {
-                    id: modelItem
-                    model: adbModel
-                    rowIndex: index
-                    onChanged: {
-                        idFiels.text = at("id") ? at("id") : ""
-                        comentField.text = at("comment") ? at("comment"): ""
-                    }
-                }
-                
                 TextField {
                     id: idFiels
                     placeholderText: "Id"
+                    text: model.id
+                    onTextChanged: model.id = text
                 }
                 TextField {
                     id: comentField
                     placeholderText: "Coment"
+                    text: model.comment
+                    onTextChanged: model.comment = text
                 }
-                Button {
-                    text: qsTr("OK")
-                    onClicked: {
-                        modelItem.write("id", idFiels.text)
-                        modelItem.write("comment", comentField.text)
-                        modelItem.commit()
-                        changeRecord.close()
+                Row {
+                    Button {
+                        text: qsTr("Cancel")
+                        onClicked: {
+                            root.model.rollback()
+                            changeRecord.close()
+                        }
+                    }
+                    Button {
+                        text: qsTr("OK")
+                        onClicked: {
+                            root.model.commit()
+                            changeRecord.close()
+                        }
                     }
                 }
             }

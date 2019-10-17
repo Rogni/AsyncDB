@@ -30,15 +30,14 @@ set (SOURCES
     Include/AsyncDB/ADBAbstractListModelConfiguration.h
     Src/AsyncDB/ADBAbstractListModelConfiguration.cpp
 
-    Include/AsyncDB/ADBItemModel.h
-    Src/AsyncDB/ADBItemModel.cpp
-
     Include/AsyncDB/ADBCustomListModelConfiguration.h
     Src/AsyncDB/ADBCustomListModelConfiguration.cpp
 
     Include/AsyncDB/AsyncDB.h
     Src/AsyncDB/AsyncDB.cpp
 
+    Src/AsyncDB/ADBQueryHelpers.h
+    Src/AsyncDB/ADBQueryHelpers.cpp
     )
 
 add_library(${PROJECT_NAME} ${SOURCES})
